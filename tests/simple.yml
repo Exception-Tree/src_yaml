@@ -1,0 +1,10 @@
+report:
+  name: simple
+  preprocess:
+    - joiner:
+        name: joiner_last
+        depend_on: joiner_first
+    - joiner:
+        name: joiner_first
+        depend_on: first
+  #section1:
