@@ -82,20 +82,29 @@ class BaseSection(BaseModel):
     def amount(self):
         return sum([x.amount for x in self.items])
 
-    def __init__(self, *, raw_sections: List[Dict], types: Dict, global_vars: Dict, **data):
+    def __init__(self, *, raw_sections: Dict, types: Dict, global_vars: Dict, **data):
         _sections = []
 
-        for name, item in [list(x.items())[0] for x in raw_sections]:
-            if name == 'loop':
-                _sections.append(types[name](raw_sections=item, global_vars=global_vars, sort=0))
-            else:
-                _sections.append(parse_obj_as(types[name], item))
+        for key, value in raw_sections.items():
+            if key == 'items':
+                for dict_item in value:
+                    name, item = list(dict_item.items())[0]
+                    if name == 'loop':
+                        _sections.append(types[name](raw_sections=item, global_vars=global_vars))
+                    else:
+                        _sections.append(parse_obj_as(types[name], item))
+                    #_sections = value
+
+        # for name, item in [list(x.items())[0] for x in raw_sections]:
+        #     if name == 'loop':
+        #         _sections.append(types[name](raw_sections=item, global_vars=global_vars))
+        #     else:
+        #         _sections.append(parse_obj_as(types[name], item))
         super().__init__(items=_sections, types=types, **data)
 
 
 class Section(BaseSection):
     items: List[SectionType]
-    sort: int = 0
 
     def __init__(self, *, raw_sections: List[Dict], **data) -> None:
         """My custom init!"""

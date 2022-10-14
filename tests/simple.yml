@@ -1,10 +1,53 @@
 report:
+  standard: g2-105
   name: simple
+  main:
+    title:
+      name: Test
+      company: Some
+    sections:
+      section0:
+        - file: {name: test}
+        - image: {name: test, caption: T, reference: Y}
+      appendix0:
+        type: обязательное
+        caption: some text
+        reference: ref
+        items:
+          - image: {name: test, caption: T, reference: Y}
+          - image: {name: test, caption: T, reference: Y}
+  globals:
+    main: [
+      {name: 'n0', folder: 'N0'},
+      {name: 'as+', folder: 'ASP'},
+      {name: 'as-', folder: 'ASM'}
+    ]
+    crash:
+    other:
   preprocess:
     - joiner:
         name: joiner_last
         depend_on: joiner_first
+        process: [{name: test}]
     - joiner:
         name: joiner_first
+        iterator: $globals.main
         depend_on: first
+        regex: 'KT[0-9]+P1'
+        process: [
+          {name: telem.hex, path: $folder, outpath: ''}
+        ]
+#  sections:
+#    - section:
+#        name: start
+#        items:
+#          - file: {name: test.md}
+##          - loop:
+##              iterator: { file: $globals.main}
+##              items:
+##                - file: { name: file.name}
+#    - section:
+#        name: appendix A
+#        iterator: {key: $globals.main}
+#        items: []
   #section1:

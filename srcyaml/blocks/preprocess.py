@@ -1,10 +1,10 @@
 import re
 import subprocess
 from pathlib import Path
-from typing import List, Dict, Optional
+from typing import List, Dict, Optional, Union
 
 #from mputils.hashmaker import HashMaker
-from pydantic import BaseModel, Extra
+from pydantic import BaseModel, Extra, Field
 
 
 class File(BaseModel):
@@ -12,10 +12,10 @@ class File(BaseModel):
     folders: Optional[List[Path]]
     outputs: Optional[List[Path]]
 
-    def __init__(self, *, raw_sections: Dict, global_vars: Dict, **data):
+    def __init__(self, *, raw_sections: Dict, global_var: Union[Dict, List], **data):
         items = {}
         for key, item in raw_sections.items():
-            items[key] = self.replace_item(item, global_vars)
+            items[key] = self.replace_item(item, global_var)
 
         if 'outputs' in items and items['outputs']:
             if not items['folders']:
@@ -25,11 +25,12 @@ class File(BaseModel):
 
         super().__init__(**items)
 
-    def replace_item(self, item, global_vars: Dict):
+    def replace_item(self, item, global_vars: Union[Dict, List]):
         if isinstance(item, list):
             newitems = []
             for value in item:
-                first = re.findall(re.compile('\$globals.(.*)'), value)
+                #first = re.findall(re.compile('\$globals.(.*)'), value)
+                first = re.findall(re.compile('\$(.*)'), value)
                 if not first:
                     newitems.append(value)
                     continue
@@ -51,16 +52,23 @@ class File(BaseModel):
 
 
 class BasePreProcess(BaseModel, extra=Extra.forbid):
+    name: str #= Field()
     process: List[File]
     depend_on: Optional[str] = 'after'
-    name: Optional[str] = 'unknown'
+    iterator: Optional[str]
 
     def __init__(self, *, raw_sections: Dict, global_vars: Dict, **data):
         values = {'process': []}
+
+        global_var = None
+        if 'iterator' in raw_sections:
+            global_var = re.findall(re.compile('\$globals.(.*)'), raw_sections['iterator'])
+            global_var = global_vars[global_var[0]]
+
         for key, item in raw_sections.items():
             if 'process' in key:
                 for j in item:
-                    values[key].append(File(raw_sections=j, global_vars=global_vars))
+                    values[key].append(File(raw_sections=j, global_var=global_var))
             else:
                 values[key] = item
         super().__init__(**values)
@@ -78,6 +86,13 @@ class BasePreProcess(BaseModel, extra=Extra.forbid):
 
 class Joiner(BasePreProcess):
     process: List[File]
+    regex: Optional[str]
+
+    # def __init__(self, *, raw_sections: Dict, **data):
+    #     #for key, item in raw_sections.items():
+
+    def cmd(self):
+        pass
 
 
 class Process(BaseModel):
@@ -198,7 +213,6 @@ class Preprocess(BaseModel):
             _item = item[key]
             values['items'].append(types[key](raw_sections=_item, global_vars=global_vars))
 
-
         # for key, item in raw_sections.items():
         #     values[key] = types[key](raw_sections=item, global_vars=global_vars)
         #     values[key].name = types[key]
@@ -222,16 +236,12 @@ class Preprocess(BaseModel):
             else:
                 others.append(item)
 
+        self.items = firsts+others+lasts
         #for item in others:
-
 
     @property
     def amount(self):
         ret = 0
-        for x in [
-            a for a in [
-                self.graph,
-                self.joiner,
-                self.subprocess] if a]:
-            ret += x.amount
+        for item in self.items:
+            ret += item.amount
         return ret

@@ -1,0 +1,9 @@
+report:
+  standard: g7-32
+  name: simple
+  main:
+    title:
+      name: test
+      company: some
+    introduction:
+      - file: {name: introduction.md}
