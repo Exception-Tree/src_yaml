@@ -1,21 +1,36 @@
 from pathlib import Path
-from typing import Optional, List
+from typing import Optional, List, Literal, Union
 
 from pydantic import BaseModel, Field, Extra
 
 
 class Item(BaseModel):
+    filename: Path = Field(alias="name")
+
+
+class Image(Item):
+    caption: str
+    reference: str
+    place: Optional[Literal['top', 'bottom', 'center', 'here']] = 'here'
+
+
+class Table(Item):
     pass
 
 
 class File(Item):
-    filename: Path = Field(alias="name")
+    items: Optional[List[Union[Image, Table]]]
 
-
-class Image(File):
-    caption: str
-    reference: str
-
+    def __init__(self, **data):
+        values = {'items': []}
+        for key, item in data.items():
+            if 'items' in key:
+                for val in item:
+                    if 'image' in val:
+                        values['items'].append(Image(**val['image']))
+            else:
+                values[key] = item
+        super().__init__(**values)
 
 class Section(BaseModel, extra=Extra.forbid):
     items: Optional[List[Item]]
@@ -42,4 +57,4 @@ class SectionLoop(Section):
 
 
 class Main(BaseModel):
-    sections: Optional[List[Item]]
+    sections: Optional[List[Section]]

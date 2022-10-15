@@ -7,7 +7,9 @@ report:
       company: Some
     sections:
       section0:
-        - file: {name: test}
+        - file: {name: test.md, items:[
+          image: {name: test, caption: Image in file, reference: refImageInFile}
+        ]}
         - image: {name: test, caption: T, reference: Y}
       appendix0:
         type: обязательное
