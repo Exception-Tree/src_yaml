@@ -1,5 +1,8 @@
+import json
+
 from report.common.report_image_common import ReportImageCommon, ReportImageCommonParam
 from report.common.report_list_common import ReportListCommon
+from report.common.report_table_common import ReportTableCommon
 from report.common.report_text_common import ReportTextCommon
 from report.g2_105.report_appendix_g2_105 import ReportAppendixG2105
 from report.g2_105.report_g2_105 import ReportG2105, ReportTitleG2105
@@ -54,7 +57,7 @@ class DocG2105(Doc):
                     val = None
                     if isinstance(item, Image):
                         item: Image
-                        image_param = ReportImageCommonParam('auto', 'auto', item.place)
+                        image_param = ReportImageCommonParam(item.width, item.height, item.place, item.landscape)
                         val = ReportImageCommon(item.filename, item.caption, item.reference, image_param)
                     elif isinstance(item, File):
                         item: File
@@ -69,16 +72,21 @@ class DocG2105(Doc):
             new_item = None
             if isinstance(item, Image):
                 item: Image
-                image_param = ReportImageCommonParam('auto', 'auto', item.place)
+                image_param = ReportImageCommonParam(item.width, item.height, item.place, item.landscape)
                 new_item = ReportImageCommon(item.filename, item.caption, item.reference, image_param)
             elif isinstance(item, File):
                 item: File
                 new_item = ReportTextCommon(item.filename)
                 for value in item.items:
                     if isinstance(value, Image):
-                        image_param = ReportImageCommonParam('auto', 'auto', value.place)
+                        image_param = ReportImageCommonParam(item.width, item.height, item.place, item.landscape)
                         new_item.append(ReportImageCommon(value.filename, value.caption, value.reference, image_param))
                     elif isinstance(value, Table):
                         pass
+            elif isinstance(item, Table):
+                item: Table
+                with open(item.filename, encoding=item.encoding) as file:
+                    json_dict = json.load(file)
+                    new_item = ReportTableCommon(json_dict, landscape=item.landscape)
             if new_item:
                 new_section.append(new_item)
