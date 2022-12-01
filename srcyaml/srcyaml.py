@@ -1,31 +1,26 @@
 import os
-import shutil
 import subprocess
-import tempfile
 from pathlib import Path
 from typing import List, Optional, Dict, Union
-import json
 
 import yaml
 
 from pydantic import parse_obj_as
 from report import SimpleReportCreator, SimpleReportCreatorCallback
-from report.common import ReportCommon
-from report.common.report_title_common import ReportTitleCommon
 from report.g2_105.report_g2_105 import ReportG2105, ReportTitleG2105
 from report.utils.hashmaker import HashMaker
 from tqdm import tqdm
 from loguru import logger
 
-from srcyaml import standard
-from srcyaml.blocks import Preprocess
+from srcyaml.standard import DocG2105
+from srcyaml.standard import Preprocess
 from srcyaml.blocks.preprocess import File, TlmProc, Tlmpr, BasePreProcess
 #from mputilsyaml.blocks.section import SectionLoop
 
 from collections import OrderedDict
-from shtatgraph.core.components.graphs import Graphs
-from shtatgraph.core.components.models import HiddenShtatConfig
-from shtatgraph.runner import silent_run
+#from shtatgraph.core.components.graphs import Graphs
+#from shtatgraph.core.components.models import HiddenShtatConfig
+#from shtatgraph.runner import silent_run
 import datetime
 
 
@@ -104,107 +99,109 @@ class SimpleReportCreatorYaml(SimpleReportCreator):
             pbar = tqdm(total=pp.amount, desc='preprocess', leave=False)
 
             for item in pp.items:
+                # TODO: depend on
                 print(item.name)
+                item.make()
                 pbar.update()
 
-            if pp.subprocess:
-                for item in pp.subprocess.depend_on('before'):
-                    self.add_time(f'preprocess.subprocess.[{item.cmd}]')
-
-                    procs = item.process()
-                    while procs:
-                        for proc in procs:
-                            if proc.poll() is not None:
-                                procs.remove(proc)
-                                pbar.update()
-            if pp.joiner:
-                self.add_time(f'preprocess.joiner')
-                joiner = mp.joiner.Joiner()
-                for file in pp.joiner.process:
-                    if file.outputs:
-                        for folder, output in zip(file.folders, file.outputs):
-                            kts = joiner.list_kt_folders(folder)
-                            rebuild = False
-                            for kt in kts:
-                                if not self.__hm.compare_file(Path(kt) / 'spool/telem.hex'):
-                                    rebuild = True
-
-                            if rebuild:
-                                joiner.join(root=folder, output_path=output)
-                                self.__hm.save()
-                            else:
-                                pbar.write(f'Joiner skips "{Path(kt)}"')
-                            pbar.update()
-                    else:
-                        for folder in file.folders:
-                            kts = joiner.list_kt_folders(folder)
-                            rebuild = False
-                            for kt in kts:
-                                if not self.__hm.compare_dir(Path(kt)):
-                                    rebuild = True
-                            if rebuild:
-                                joiner.join(root=folder, output_path=self.tmp / folder)
-                                self.__hm.save()
-                            else:
-                                pbar.write(f'Joiner skips "{Path(kt)}"')
-                            pbar.update()
-                if pp.subprocess:
-
-                    for item in pp.subprocess.depend_on('joiner'):
-                        self.add_time(f'preprocess.subprocess.[{item.cmd}]')
-                        procs = item.process()
-                        while procs:
-                            for proc in procs:
-                                if proc.poll() is not None:
-                                    procs.remove(proc)
-                                    pbar.update()
-
-            if pp.tlmproc:
-                self.add_time(f'preprocess.tlmproc')
-                self.__subprocess(pp.tlmproc, pp.tlmproc.process, pbar)
-                if pp.subprocess:
-                    for item in pp.subprocess.depend_on('tlmproc'):
-                        procs = item.process()
-                        while procs:
-                            for proc in procs:
-                                if proc.poll() is not None:
-                                    procs.remove(proc)
-                                    pbar.update()
-
-            if pp.tlmpr:
-                self.add_time(f'preprocess.tlmpr')
-                self.__subprocess(pp.tlmpr, pp.tlmpr.process, pbar)
-                if pp.subprocess:
-                    for item in pp.subprocess.depend_on('tlmpr'):
-                        procs = item.process()
-                        while procs:
-                            for proc in procs:
-                                if proc.poll() is not None:
-                                    procs.remove(proc)
-                                    pbar.update()
-            if pp.shtatgraph:
-                self.add_time(f'preprocess.shtatgraph')
-                for file in pp.shtatgraph.process:
-                    if file.outputs:
-                        raise NotImplementedError('Чуть позже...')
-                    else:
-                        for folder in file.folders:
-                            # if not self.__hm.compare_dir(Path(folder)):
-                            silent_run(config_path=file.name, custom_graphs=Graphs(), custom_spool=folder,
-                                       output_folder=self.tmp / folder / 'pics')
-                                # self.__hm.save()
-                            # else:
-                            #     pbar.write(f'shtatgraph skips "{Path(folder)}"')
-
-            if pp.subprocess:
-                for item in pp.subprocess.depend_on('after'):
-                    self.add_time(f'preprocess.subprocess.[{item.cmd}]')
-                    procs = item.process()
-                    while procs:
-                        for proc in procs:
-                            if proc.poll() is not None:
-                                procs.remove(proc)
-                                pbar.update()
+            # if pp.subprocess:
+            #     for item in pp.subprocess.depend_on('before'):
+            #         self.add_time(f'preprocess.subprocess.[{item.cmd}]')
+            #
+            #         procs = item.process()
+            #         while procs:
+            #             for proc in procs:
+            #                 if proc.poll() is not None:
+            #                     procs.remove(proc)
+            #                     pbar.update()
+            # if pp.joiner:
+            #     self.add_time(f'preprocess.joiner')
+            #     joiner = mp.joiner.Joiner()
+            #     for file in pp.joiner.process:
+            #         if file.outputs:
+            #             for folder, output in zip(file.folders, file.outputs):
+            #                 kts = joiner.list_kt_folders(folder)
+            #                 rebuild = False
+            #                 for kt in kts:
+            #                     if not self.__hm.compare_file(Path(kt) / 'spool/telem.hex'):
+            #                         rebuild = True
+            #
+            #                 if rebuild:
+            #                     joiner.join(root=folder, output_path=output)
+            #                     self.__hm.save()
+            #                 else:
+            #                     pbar.write(f'Joiner skips "{Path(kt)}"')
+            #                 pbar.update()
+            #         else:
+            #             for folder in file.folders:
+            #                 kts = joiner.list_kt_folders(folder)
+            #                 rebuild = False
+            #                 for kt in kts:
+            #                     if not self.__hm.compare_dir(Path(kt)):
+            #                         rebuild = True
+            #                 if rebuild:
+            #                     joiner.join(root=folder, output_path=self.tmp / folder)
+            #                     self.__hm.save()
+            #                 else:
+            #                     pbar.write(f'Joiner skips "{Path(kt)}"')
+            #                 pbar.update()
+            #     if pp.subprocess:
+            #
+            #         for item in pp.subprocess.depend_on('joiner'):
+            #             self.add_time(f'preprocess.subprocess.[{item.cmd}]')
+            #             procs = item.process()
+            #             while procs:
+            #                 for proc in procs:
+            #                     if proc.poll() is not None:
+            #                         procs.remove(proc)
+            #                         pbar.update()
+            #
+            # if pp.tlmproc:
+            #     self.add_time(f'preprocess.tlmproc')
+            #     self.__subprocess(pp.tlmproc, pp.tlmproc.process, pbar)
+            #     if pp.subprocess:
+            #         for item in pp.subprocess.depend_on('tlmproc'):
+            #             procs = item.process()
+            #             while procs:
+            #                 for proc in procs:
+            #                     if proc.poll() is not None:
+            #                         procs.remove(proc)
+            #                         pbar.update()
+            #
+            # if pp.tlmpr:
+            #     self.add_time(f'preprocess.tlmpr')
+            #     self.__subprocess(pp.tlmpr, pp.tlmpr.process, pbar)
+            #     if pp.subprocess:
+            #         for item in pp.subprocess.depend_on('tlmpr'):
+            #             procs = item.process()
+            #             while procs:
+            #                 for proc in procs:
+            #                     if proc.poll() is not None:
+            #                         procs.remove(proc)
+            #                         pbar.update()
+            # if pp.shtatgraph:
+            #     self.add_time(f'preprocess.shtatgraph')
+            #     for file in pp.shtatgraph.process:
+            #         if file.outputs:
+            #             raise NotImplementedError('Чуть позже...')
+            #         else:
+            #             for folder in file.folders:
+            #                 # if not self.__hm.compare_dir(Path(folder)):
+            #                 silent_run(config_path=file.name, custom_graphs=Graphs(), custom_spool=folder,
+            #                            output_folder=self.tmp / folder / 'pics')
+            #                     # self.__hm.save()
+            #                 # else:
+            #                 #     pbar.write(f'shtatgraph skips "{Path(folder)}"')
+            #
+            # if pp.subprocess:
+            #     for item in pp.subprocess.depend_on('after'):
+            #         self.add_time(f'preprocess.subprocess.[{item.cmd}]')
+            #         procs = item.process()
+            #         while procs:
+            #             for proc in procs:
+            #                 if proc.poll() is not None:
+            #                     procs.remove(proc)
+            #                     pbar.update()
 
         except Exception as ex:
             if self.callback.exception(ex):
@@ -381,7 +378,7 @@ class SimpleReportCreatorYaml(SimpleReportCreator):
             self.callback.error(f'no standard tag found')
             return False
 
-        standards = {'g2-105': { 'report': ReportG2105, 'pedantic': standard.DocG2105}, 'g7-32': None}
+        standards = {'g2-105': { 'report': ReportG2105, 'pedantic': DocG2105}, 'g7-32': None}
         if doc_report['standard'] not in standards:
             self.callback.error(f"unknown standard:{doc_report['standard']}")
             return False
