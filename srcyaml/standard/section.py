@@ -1,21 +1,24 @@
 from pathlib import Path
 from typing import Optional, List, Literal, Union
-
 from pydantic import BaseModel, Field, Extra
 
 
-class Item(BaseModel):
+class Item(BaseModel, extra=Extra.forbid):
     filename: Path = Field(alias="name")
+    encoding: Optional[str] = 'utf-8'
 
 
 class Image(Item):
     caption: str
     reference: str
+    landscape: Optional[int] = False
     place: Optional[Literal['top', 'bottom', 'center', 'here']] = 'here'
+    width: Optional[float] = 'auto'
+    height: Optional[float] = 'auto'
 
 
 class Table(Item):
-    pass
+    landscape: Optional[int] = False
 
 
 class File(Item):
@@ -32,6 +35,7 @@ class File(Item):
                 values[key] = item
         super().__init__(**values)
 
+
 class Section(BaseModel, extra=Extra.forbid):
     items: Optional[List[Item]]
 
@@ -44,6 +48,8 @@ class Section(BaseModel, extra=Extra.forbid):
                         value = File(**_item['file'])
                     elif 'image' in _item:
                         value = Image(**_item['image'])
+                    elif 'table' in _item:
+                        value = Table(**_item['table'])
                     else:
                         value = _item
                     values['items'].append(value)

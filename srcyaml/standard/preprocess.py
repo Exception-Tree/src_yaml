@@ -3,6 +3,7 @@ from pathlib import Path
 from typing import Optional, List, Dict, Union
 
 from pydantic import BaseModel, Extra
+from srcgraph import SrcGraph, SrcImageLine, SrcImageSubplots
 
 
 class File(BaseModel):
@@ -74,6 +75,8 @@ class BasePreProcess(BaseModel, extra=Extra.forbid):
     def cmd(self, *args, **kwargs):
         raise NotImplemented
 
+    def make(self):
+        raise NotImplemented
     # def rebuild(self, hasher: HashMaker):
     #     return False
 
@@ -93,13 +96,38 @@ class Joiner(BasePreProcess):
         pass
 
 
+class GraphConfig(BaseModel):
+    type: str = 'line'
+    xaxis: str
+    reference: str
+
+
+class Graph(BasePreProcess):
+    configs: List[GraphConfig]
+
+    def cmd(self):
+        pass
+
+    def make(self):
+        src_graph = SrcGraph('conf.json', '.')
+        for idx, item in enumerate(self.process):
+            image = None
+            if self.configs[idx].type == 'line':
+                image = SrcImageLine(item.name, self.configs[idx].reference, self.configs[idx].xaxis)
+            elif self.configs[idx].type == 'subplots':
+                image = SrcImageSubplots(item.name, self.configs[idx].reference, self.configs[idx].xaxis)
+            if image:
+                src_graph.append(image, True)
+        src_graph.save()
+
+
 class Preprocess(BaseModel):
     items: Optional[List[BasePreProcess]]
 
     def __init__(self, *, raw_sections: List, global_vars: Dict, **data):
         types = {
             'joiner': Joiner,
-            #'graph': GraphModel,
+            'graph': Graph,
             #'subprocess': SubProcess
         }
 
@@ -118,3 +146,7 @@ class Preprocess(BaseModel):
         for item in self.items:
             ret += item.amount
         return ret
+
+    # @property
+    # def items(self):
+    #     return self.items
