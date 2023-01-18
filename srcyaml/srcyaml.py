@@ -100,7 +100,6 @@ class SimpleReportCreatorYaml(SimpleReportCreator):
 
             for item in pp.items:
                 # TODO: depend on
-                print(item.name)
                 item.make()
                 pbar.update()
 
@@ -404,7 +403,7 @@ class SimpleReportCreatorYaml(SimpleReportCreator):
             self.__preprocess(doc.preprocess)
 
         self.set_report(doc.make_document())
-        self.generate_pdf()
+        self.generate_pdf(name=doc.name)
 
         # if doc.title:
         #     self.__title(doc.title)

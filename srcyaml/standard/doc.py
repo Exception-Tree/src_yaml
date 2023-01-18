@@ -7,6 +7,7 @@ from srcyaml.standard import Preprocess
 
 
 class Doc(BaseModel):
+    name: str
     out_path: Optional[Path]
     preprocess: Optional[Preprocess]
 

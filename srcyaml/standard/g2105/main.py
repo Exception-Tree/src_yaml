@@ -12,7 +12,9 @@ class Person(BaseModel):
 
 class TitleG2105(BaseModel):
     name: str
+    title: str
     company: str
+    signature: Optional[str] = ''
     #approved: Person
     #agreed: List[Person]
     #designed: List[Person]

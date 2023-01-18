@@ -3,6 +3,7 @@ from pathlib import Path
 from typing import Optional, List, Dict, Union
 
 from pydantic import BaseModel, Extra
+from report.utils.report_format import ReportFileFormat
 from srcgraph import SrcGraph, SrcImageLine, SrcImageSubplots
 
 
@@ -96,10 +97,24 @@ class Joiner(BasePreProcess):
         pass
 
 
+class Converter(BasePreProcess):
+    headers: dict
+
+    def make(self):
+        converter = ReportFileFormat()
+        for item in self.process:
+            header = self.headers[item.name.name]
+            converter.from_csv(item.name, sep=';', header=header, with_column_names=True)
+
+    def cmd(self, *args, **kwargs):
+        pass
+
+
 class GraphConfig(BaseModel):
     type: str = 'line'
     xaxis: str
     reference: str
+    line_shape_column: Optional[dict]
 
 
 class Graph(BasePreProcess):
@@ -115,7 +130,9 @@ class Graph(BasePreProcess):
             if self.configs[idx].type == 'line':
                 image = SrcImageLine(item.name, self.configs[idx].reference, self.configs[idx].xaxis)
             elif self.configs[idx].type == 'subplots':
-                image = SrcImageSubplots(item.name, self.configs[idx].reference, self.configs[idx].xaxis)
+                line_shape = self.configs[idx].line_shape_column if self.configs[idx].line_shape_column else {}
+                image = SrcImageSubplots(item.name, self.configs[idx].reference, self.configs[idx].xaxis,
+                                         line_shape=line_shape)
             if image:
                 src_graph.append(image, True)
         src_graph.save()
@@ -128,6 +145,7 @@ class Preprocess(BaseModel):
         types = {
             'joiner': Joiner,
             'graph': Graph,
+            'convert': Converter
             #'subprocess': SubProcess
         }
 

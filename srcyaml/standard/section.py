@@ -11,14 +11,18 @@ class Item(BaseModel, extra=Extra.forbid):
 class Image(Item):
     caption: str
     reference: str
-    landscape: Optional[int] = False
+    landscape: Optional[Literal['picture', 'page', 'both']] = 'None'
     place: Optional[Literal['top', 'bottom', 'center', 'here']] = 'here'
     width: Optional[float] = 'auto'
     height: Optional[float] = 'auto'
+    #include_column: Optional[str]
+    #line_shape_column: Optional[dict]
 
 
 class Table(Item):
+    reference: str
     landscape: Optional[int] = False
+    title: Optional[str]
 
 
 class File(Item):
@@ -29,8 +33,12 @@ class File(Item):
         for key, item in data.items():
             if 'items' in key:
                 for val in item:
+                    value = None
                     if 'image' in val:
                         values['items'].append(Image(**val['image']))
+                    elif 'table' in val:
+                        value = Table(**val['table'])
+                        values['items'].append(value)
             else:
                 values[key] = item
         super().__init__(**values)

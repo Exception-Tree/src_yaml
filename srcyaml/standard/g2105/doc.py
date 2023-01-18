@@ -42,8 +42,8 @@ class DocG2105(Doc):
     def make_document(self):
         report = ReportG2105()
         if self.main.title:
-            name = self.main.title.name
-            title = ReportTitleG2105(name, 'test')
+            title = ReportTitleG2105(title=self.main.title.title, doc_name=self.main.title.name,
+                                     company=self.main.title.company, signature=self.main.title.signature)
             report.append(title)
         if self.main.sections:
             sections = ReportListCommon()
@@ -79,14 +79,22 @@ class DocG2105(Doc):
                 new_item = ReportTextCommon(item.filename)
                 for value in item.items:
                     if isinstance(value, Image):
-                        image_param = ReportImageCommonParam(item.width, item.height, item.place, item.landscape)
+                        image_param = ReportImageCommonParam(value.width, value.height, value.place, value.landscape)
                         new_item.append(ReportImageCommon(value.filename, value.caption, value.reference, image_param))
                     elif isinstance(value, Table):
-                        pass
+                        value: Table
+                        with open(value.filename, encoding=value.encoding) as file:
+                            json_dict = json.load(file)
+                            _new_item = ReportTableCommon(json_dict, landscape=value.landscape)
+                            if value.title:
+                                _new_item.title = value.title
+                            _new_item.reference = value.reference
+                            new_item.append(_new_item)
             elif isinstance(item, Table):
                 item: Table
                 with open(item.filename, encoding=item.encoding) as file:
                     json_dict = json.load(file)
                     new_item = ReportTableCommon(json_dict, landscape=item.landscape)
+                    new_item.reference = item.reference
             if new_item:
                 new_section.append(new_item)
