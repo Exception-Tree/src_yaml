@@ -35,7 +35,6 @@ class SectionTable(SectionType):
     with_header: Optional[bool]
 
 
-
 class SectionGraph(SectionType):
     key = 'graph'
     caption: str

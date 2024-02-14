@@ -3,6 +3,7 @@ from pathlib import Path
 from typing import Optional, List, Dict, Union
 
 from pydantic import BaseModel, Extra
+from report.utils.hashmaker import HashMaker
 from report.utils.report_format import ReportFileFormat
 from srcgraph import SrcGraph, SrcImageLine, SrcImageSubplots
 
@@ -76,7 +77,7 @@ class BasePreProcess(BaseModel, extra=Extra.forbid):
     def cmd(self, *args, **kwargs):
         raise NotImplemented
 
-    def make(self):
+    def make(self, tmp_folder, hasher: HashMaker):
         raise NotImplemented
     # def rebuild(self, hasher: HashMaker):
     #     return False
@@ -100,11 +101,14 @@ class Joiner(BasePreProcess):
 class Converter(BasePreProcess):
     headers: dict
 
-    def make(self):
+    def make(self, tmp_folder, hasher: HashMaker):
         converter = ReportFileFormat()
         for item in self.process:
             header = self.headers[item.name.name]
-            converter.from_csv(item.name, sep=';', header=header, with_column_names=True)
+            if not hasher.compare_file(item.name):
+                converter.from_csv(item.name, sep=';', header=header, with_column_names=True,
+                                   output_file=tmp_folder / f'{item.name}.json')
+        hasher.save()
 
     def cmd(self, *args, **kwargs):
         pass
@@ -123,7 +127,7 @@ class Graph(BasePreProcess):
     def cmd(self):
         pass
 
-    def make(self):
+    def make(self, tmp_folder, hasher: HashMaker):
         src_graph = SrcGraph('conf.json', '.')
         for idx, item in enumerate(self.process):
             image = None

@@ -26,5 +26,5 @@ class Doc(BaseModel):
 
         super().__init__(**values)
 
-    def make_document(self):
+    def make_document(self, tmp):
         raise NotImplemented

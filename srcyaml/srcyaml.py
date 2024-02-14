@@ -12,8 +12,7 @@ from report.utils.hashmaker import HashMaker
 from tqdm import tqdm
 from loguru import logger
 
-from srcyaml.standard import DocG2105
-from srcyaml.standard import Preprocess
+from srcyaml.standard import Preprocess, DocG2105
 from srcyaml.blocks.preprocess import File, TlmProc, Tlmpr, BasePreProcess
 #from mputilsyaml.blocks.section import SectionLoop
 
@@ -100,7 +99,7 @@ class SimpleReportCreatorYaml(SimpleReportCreator):
 
             for item in pp.items:
                 # TODO: depend on
-                item.make()
+                item.make(self.tmp, self.__hm)
                 pbar.update()
 
             # if pp.subprocess:
@@ -344,6 +343,7 @@ class SimpleReportCreatorYaml(SimpleReportCreator):
     def set_remote_server(self, *, host: str, port: int):
         from mputils.nettools import NetTools
         NetTools.set_processing_server(server=host, port=port)
+
     def add_time(self, key: str):
         if key in self.times:
             logger.warning(f'В times уже есть такой ключ: ({key}: {self.times[key]})')
@@ -402,8 +402,8 @@ class SimpleReportCreatorYaml(SimpleReportCreator):
             self.callback.total = doc.preprocess.amount
             self.__preprocess(doc.preprocess)
 
-        self.set_report(doc.make_document())
-        self.generate_pdf(name=doc.name)
+        self.set_report(doc.make_document(self.tmp))
+        self.generate_pdf(name=doc.name)#, out_path=self.tmp)
 
         # if doc.title:
         #     self.__title(doc.title)

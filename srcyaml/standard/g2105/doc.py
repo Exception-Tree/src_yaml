@@ -1,4 +1,5 @@
 import json
+from pathlib import Path
 
 from report.common.report_image_common import ReportImageCommon, ReportImageCommonParam
 from report.common.report_list_common import ReportListCommon
@@ -39,7 +40,7 @@ class DocG2105(Doc):
 
         super().__init__(**filtered)
 
-    def make_document(self):
+    def make_document(self, tmp):
         report = ReportG2105()
         if self.main.title:
             title = ReportTitleG2105(title=self.main.title.title, doc_name=self.main.title.name,
@@ -48,7 +49,7 @@ class DocG2105(Doc):
         if self.main.sections:
             sections = ReportListCommon()
             for section in self.main.sections:
-                self.__make_section(sections, section)
+                self.__make_section(tmp, sections, section)
             report.append(sections)
         if self.main.appendixes:
             for ap in self.main.appendixes:
@@ -67,7 +68,19 @@ class DocG2105(Doc):
                 report.append(appendix)
         return report
 
-    def __make_section(self, new_section: ReportListCommon, section: Section):
+    def __make_table(self, tmp, item: Table):
+        name = tmp / item.filename
+        if not Path(name).exists():
+            name = item.filename
+        with open(name, encoding=item.encoding) as file:
+            json_dict = json.load(file)
+            new_item = ReportTableCommon(json_dict, landscape=item.landscape, header=item.header)
+            if item.title:
+                new_item.title = item.title
+            new_item.reference = item.reference
+            return new_item
+
+    def __make_section(self, tmp, new_section: ReportListCommon, section: Section):
         for item in section.items:
             new_item = None
             if isinstance(item, Image):
@@ -82,19 +95,24 @@ class DocG2105(Doc):
                         image_param = ReportImageCommonParam(value.width, value.height, value.place, value.landscape)
                         new_item.append(ReportImageCommon(value.filename, value.caption, value.reference, image_param))
                     elif isinstance(value, Table):
-                        value: Table
-                        with open(value.filename, encoding=value.encoding) as file:
-                            json_dict = json.load(file)
-                            _new_item = ReportTableCommon(json_dict, landscape=value.landscape)
-                            if value.title:
-                                _new_item.title = value.title
-                            _new_item.reference = value.reference
-                            new_item.append(_new_item)
+                        new_item.append(self.__make_table(tmp, value))
+                        # value: Table
+                        # name = tmp / value.filename
+                        # if not Path(name).exists():
+                        #     name = value.filename
+                        # with open(name, encoding=value.encoding) as file:
+                        #     json_dict = json.load(file)
+                        #     _new_item = ReportTableCommon(json_dict, landscape=value.landscape, header=value.header)
+                        #     if value.title:
+                        #         _new_item.title = value.title
+                        #     _new_item.reference = value.reference
+                        #     new_item.append(_new_item)
             elif isinstance(item, Table):
-                item: Table
-                with open(item.filename, encoding=item.encoding) as file:
-                    json_dict = json.load(file)
-                    new_item = ReportTableCommon(json_dict, landscape=item.landscape)
-                    new_item.reference = item.reference
+                new_item = self.__make_table(tmp, item)
+                # item: Table
+                # with open(item.filename, encoding=item.encoding) as file:
+                #     json_dict = json.load(file)
+                #     new_item = ReportTableCommon(json_dict, landscape=item.landscape, header=item.header)
+                #     new_item.reference = item.reference
             if new_item:
                 new_section.append(new_item)

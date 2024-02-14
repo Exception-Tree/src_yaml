@@ -23,6 +23,7 @@ class Table(Item):
     reference: str
     landscape: Optional[int] = False
     title: Optional[str]
+    header: Optional[str]
 
 
 class File(Item):
